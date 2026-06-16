@@ -2,6 +2,8 @@
 
 Servidor MCP (Model Context Protocol) especializado em **pesquisa de preços para contratações públicas**, implementando a metodologia da **IN SEGES/ME nº 65/2021**.
 
+> 📖 **[Manual de Uso completo → MANUAL.md](./MANUAL.md)**
+
 ## Funcionalidades
 
 - Busca automática de preços no **PNCP** (Portal Nacional de Contratações Públicas)
@@ -29,7 +31,7 @@ Servidor MCP (Model Context Protocol) especializado em **pesquisa de preços par
 ## Instalação
 
 ```bash
-git clone https://github.com/<seu-usuario>/radar-precos-mcp.git
+git clone https://github.com/charlesmmorais/radar-precos-mcp.git
 cd radar-precos-mcp
 npm install
 npm run build
@@ -42,7 +44,7 @@ Adicione ao `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "pesquisa-precos": {
+    "radar-precos": {
       "command": "node",
       "args": ["/caminho/para/radar-precos-mcp/dist/index.js"]
     }
@@ -50,10 +52,13 @@ Adicione ao `claude_desktop_config.json`:
 }
 ```
 
+> **Windows:** use barras invertidas ou caminho absoluto com `//`, ex:
+> `"C:\\Users\\usuario\\radar-precos-mcp\\dist\\index.js"`
+
 ## Uso com Claude Code
 
 ```bash
-claude mcp add pesquisa-precos node /caminho/para/radar-precos-mcp/dist/index.js
+claude mcp add radar-precos node /caminho/para/radar-precos-mcp/dist/index.js
 ```
 
 ## Exemplo de uso
@@ -78,13 +83,10 @@ O Claude usará automaticamente `executar_pesquisa_precos` e `gerar_relatorios`.
 # Verificação de tipos
 npm run typecheck
 
-# Testes unitários
+# Testes unitários (45 testes)
 npm test
 
-# Testes de integração (requer internet)
-npm run test:integration
-
-# Build
+# Build de produção
 npm run build
 ```
 
@@ -95,10 +97,10 @@ src/
 ├── domain/
 │   ├── types.ts          # Tipos TypeScript (FontePreco, PesquisaPrecos, etc.)
 │   ├── media-saneada.ts  # Algoritmo de Média Saneada (Z-score, CV)
-│   ├── normas.ts          # Constantes e validações (IN SEGES/ME nº 65/2021)
+│   ├── normas.ts         # Constantes e validações (IN SEGES/ME nº 65/2021)
 │   └── la002.ts          # Re-exporta normas.ts (compatibilidade)
 ├── apis/
-│   ├── pncp.ts           # Cliente PNCP (consulta + integra)
+│   ├── pncp.ts           # Cliente PNCP (consulta + integração)
 │   ├── compras.ts        # Cliente Contratos.gov.br
 │   └── ibge.ts           # Cliente IBGE IPCA (deflação)
 ├── tools/
@@ -120,7 +122,7 @@ src/
 1. Calcula média e desvio padrão amostral da série
 2. Se CV ≤ 25%: aceita a série como válida
 3. Se CV > 25% e n > 3: remove o elemento com maior |Z-score| e repete
-4. Se n = 3: para (mínimo de fontes exigido)
+4. Se n = 3: para (mínimo de fontes exigido pela norma)
 5. Preço de referência = média da série saneada
 
 ### Hierarquia de fontes (IN SEGES/ME nº 65/2021, Art. 5º)
@@ -130,5 +132,38 @@ src/
 | I | PNCP – Contratações e Contratos | 12 meses |
 | II | Compras.gov.br / Painel de Preços | 12 meses |
 | III | Contratos anteriores do próprio órgão | 12 meses |
-| IV | Mídias especializadas | 6 meses |
-| V | Cotaç
+| IV | Mídias especializadas / tabelas aprovadas | 6 meses |
+| V | Cotações diretas com fornecedores | 6 meses |
+
+### Relatórios gerados
+
+**Excel (4 abas):**
+- `Mapa de Pesquisa` — parâmetros, resultado e análise crítica
+- `Série de Preços` — todas as fontes coletadas com metadados
+- `Análise Estatística` — histórico de iterações da Média Saneada
+- `Fontes e Evidências` — URLs e comprovantes de consulta
+
+**Word:**
+- Estrutura completa conforme seções 7.1 a 7.9 da IN SEGES/ME nº 65/2021
+- Campos a preencher manualmente destacados como `[PENDÊNCIA: ...]`
+- Conclusão de razoabilidade gerada automaticamente
+
+## Limitações conhecidas
+
+- A pesquisa automática cobre PNCP e Compras.gov.br; **Banco de Preços** e **Catálogo de Soluções de TIC** requerem consulta manual
+- Deflação via IPCA exige conexão com a API do IBGE
+- Cotações com fornecedores e mídias especializadas devem ser inseridas manualmente no objeto `PesquisaPrecos`
+- O documento Word gerado requer revisão e assinatura humana — não substitui o processo administrativo
+
+## Créditos
+
+Este projeto foi desenvolvido com base em dois servidores MCP open-source voltados para contratações públicas brasileiras:
+
+- [**GovBR-Claude-Plugin**](https://github.com/heitorrapcinski/GovBR-Claude-Plugin) — forneceu a integração com as APIs do PNCP e do Compras.gov.br. A estrutura de clientes HTTP, paginação e mapeamento de respostas governamentais foram inspirados nesse projeto.
+- [**licinexus-mcp**](https://github.com/Licinexus/licinexus-mcp) — forneceu referência de arquitetura para servidores MCP de licitações, incluindo padrões de ferramentas e organização de tipos TypeScript.
+
+A camada de análise estatística (Média Saneada, Z-score, CV) e a geração de relatórios conforme a IN SEGES/ME nº 65/2021 são contribuições originais deste projeto.
+
+## Licença
+
+MIT
